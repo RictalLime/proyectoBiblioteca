@@ -11,21 +11,24 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
-      - "3307:3306"
+      - "3307:3306"  # Puerto local 3307 -> Puerto interno 3306 del contenedor
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   php-apache:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: ./docker/dockerfile
     container_name: php_app
     restart: always
     depends_on:
       - mysql
     ports:
       - "8080:80"
+    volumes:
+      - ./api:/var/www/html/api
+      - ./public:/var/www/html
 
 volumes:
   mysql_data:

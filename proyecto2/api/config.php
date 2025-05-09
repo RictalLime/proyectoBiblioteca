@@ -1,13 +1,18 @@
 <?php
 $host = 'mysql_db';
-$dbname = 'libreria';
-$username = 'user';
-$password = 'password';
+$db   = 'libreria';
+$user = 'user';
+$pass = 'password';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn = new PDO("mysql:host=$host;dbname=$db", $user, $pass);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die(json_encode(["error" => "Error de conexión a la base de datos: " . $e->getMessage()]));
+    die("Conexión fallida: " . $e->getMessage());
 }
-?>
+
+// Agregar esta función para que index.php pueda llamarla
+function getConnection() {
+    global $conn;
+    return $conn;
+}

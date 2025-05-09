@@ -1,72 +1,60 @@
 <?php
+require_once 'config.php';
 header('Content-Type: application/json');
-include 'config.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
+$accion = $_GET['accion'] ?? 'listar';
 
-switch ($method) {
-    case 'GET':
-        try {
-            $stmt = $pdo->query("SELECT * FROM libro");
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode([
-                "total_registros" => count($result),
-                "datos" => $result
-            ]);
-        } catch (PDOException $e) {
-            echo json_encode(["error" => $e->getMessage()]);
+switch ($accion) {
+    case 'listar':
+        // Obtener los parámetros de consulta
+        $id = $_GET['id'] ?? null;
+        $genero = $_GET['genero'] ?? null;
+
+        $sql = "SELECT * FROM libro";
+        $params = [];
+
+        // Filtrar por ID si está presente
+        if ($id !== null) {
+            $sql .= " WHERE id = ?";
+            $params[] = $id;
         }
+
+        // Filtrar por género si está presente
+        elseif ($genero !== null) {
+            $sql .= " WHERE genero = ?";
+            $params[] = $genero;
+        }
+
+        $stmt = getConnection()->prepare($sql);
+        $stmt->execute($params);
+        $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['datos' => $datos]);
         break;
 
-    case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data) {
-            echo json_encode(["error" => "Datos JSON inválidos"]);
-            exit;
+    case 'crear':
+        $titulo = $_POST['titulo'] ?? '';
+        $autor = $_POST['autor'] ?? '';
+
+        if ($titulo && $autor) {
+            $stmt = getConnection()->prepare("INSERT INTO libro (titulo, autor) VALUES (?, ?)");
+            $stmt->execute([$titulo, $autor]);
         }
 
-        try {
-            $stmt = $pdo->prepare("INSERT INTO libro (isbn, titulo, genero, editorial, autor, fecha_lanzamiento, num_copias) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$data['isbn'], $data['titulo'], $data['genero'], $data['editorial'], $data['autor'], $data['fecha_lanzamiento'], $data['num_copias']]);
-            echo json_encode(["message" => "Libro agregado correctamente"]);
-        } catch (PDOException $e) {
-            echo json_encode(["error" => $e->getMessage()]);
-        }
+        header("Location: /public/index.php");
         break;
 
-    case 'PUT':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data || !isset($data['id'])) {
-            echo json_encode(["error" => "ID no proporcionado"]);
-            exit;
+    case 'eliminar':
+        $id = $_POST['id'] ?? 0;
+
+        if ($id) {
+            $stmt = getConnection()->prepare("DELETE FROM libro WHERE id = ?");
+            $stmt->execute([$id]);
         }
 
-        try {
-            $stmt = $pdo->prepare("UPDATE libro SET titulo=?, genero=?, editorial=?, autor=?, fecha_lanzamiento=?, num_copias=? WHERE id=?");
-            $stmt->execute([$data['titulo'], $data['genero'], $data['editorial'], $data['autor'], $data['fecha_lanzamiento'], $data['num_copias'], $data['id']]);
-            echo json_encode(["message" => "Libro actualizado correctamente"]);
-        } catch (PDOException $e) {
-            echo json_encode(["error" => $e->getMessage()]);
-        }
-        break;
-
-    case 'DELETE':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data || !isset($data['id'])) {
-            echo json_encode(["error" => "ID no proporcionado"]);
-            exit;
-        }
-
-        try {
-            $stmt = $pdo->prepare("DELETE FROM libro WHERE id=?");
-            $stmt->execute([$data['id']]);
-            echo json_encode(["message" => "Libro eliminado correctamente"]);
-        } catch (PDOException $e) {
-            echo json_encode(["error" => $e->getMessage()]);
-        }
+        header("Location: /public/index.php");
         break;
 
     default:
-        echo json_encode(["error" => "Método HTTP no permitido"]);
+        echo json_encode(['error' => 'Acción no válida']);
 }
-?>
